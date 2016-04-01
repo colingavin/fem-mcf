@@ -33,6 +33,7 @@
 #include <deal.II/numerics/data_out.h>
 
 #include <cassert>
+#include <fstream>
 
 using namespace dealii;
 
@@ -42,6 +43,7 @@ CSFSolver::CSFSolver() :
     grad_epsilon (DEFAULT_GRAD_EPSILON),
     max_relaxation_steps (DEFAULT_MAX_RELAX_STEPS),
     relaxation_residual_tolerance (DEFAULT_RESIDUAL_TOLERANCE),
+    time_dep_boundary_conditions (true),
     // Internal
     fe (1),
     dof_handler (triangulation),
@@ -79,10 +81,12 @@ void CSFSolver::assemble_relaxation_step() {
     mass_matrix.vmult(relax_rhs, last_solution);
     relax_rhs *= 1.0/time_step;
 
-    // Apply zero bcs
-    std::map<types::global_dof_index, double> boundary_values;
-    boundary_function->set_time(current_time);
-    VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);
+    // Apply boundary conditions
+    if(time_dep_boundary_conditions || boundary_values.empty()) {
+        deallog << "Computing boundary conditions." << std::endl;
+        boundary_function->set_time(current_time);
+        VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);    
+    }
     MatrixTools::apply_boundary_values(boundary_values, relax_system_matrix, current_solution, relax_rhs);
 }
 
@@ -184,6 +188,16 @@ void CSFSolver::run() {
         double residual = 0.0;
         unsigned int relaxation_steps = 0;
         do {
+            if(relaxation_steps >= max_relaxation_steps) {
+                        DataOut<2> data_out;
+                data_out.attach_dof_handler(dof_handler);
+                data_out.add_data_vector(residual_vector, "resid");
+                data_out.build_patches();
+
+                std::ofstream out("paperclip-test/residual.vtk");
+                data_out.write_vtk(out);
+            }
+
             // Verify that we haven't exceeded max steps
             AssertThrow(relaxation_steps < max_relaxation_steps, RelaxationConvergenceFailure(residual));
 
@@ -193,7 +207,7 @@ void CSFSolver::run() {
 
             residual_vector = last_relax_rhs;
             residual_vector -= relax_rhs;
-            residual = residual_vector.l2_norm();
+            residual = residual_vector.l2_norm() / dof_handler.n_dofs();
 
             relaxation_steps++;
         } while(residual > relaxation_residual_tolerance);

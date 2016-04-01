@@ -46,6 +46,7 @@ public:
     double grad_epsilon;
     double relaxation_residual_tolerance;
     unsigned int max_relaxation_steps;
+    bool time_dep_boundary_conditions;
     Function<2> *initial_condition;
     Function<2> *boundary_function;
 
@@ -72,6 +73,9 @@ private:
     SparseMatrix<double>    relax_system_matrix;
     Vector<double>          relax_rhs;
     Vector<double>          last_relax_rhs; // Keep this for residual computation
+
+    // Stored boundary values
+    std::map<dealii::types::global_dof_index, double> boundary_values;
 
 protected:
     // Grid / FEM Components
