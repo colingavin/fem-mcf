@@ -12,13 +12,9 @@
 
 #define OUTPUT_TIME_EPSILON 1e-6
 
-#define TEST_MIN_REFINEMENT 3
-#define TEST_MAX_REFINEMENT 7
+#define TEST_MIN_STEP 1
+#define TEST_MAX_STEP 5
 #define TEST_OUTPUT_TIME 0.125
-#define TEST_SPATIAL_TIME_STEP (TEST_OUTPUT_TIME / 50)
-#define TEST_START_TIME_STEP TEST_OUTPUT_TIME / 2
-#define TEST_TEMPORAL_STEPS 5
-#define TEST_TEMPORAL_SPACE_REFINEMENTS 6
 
 using namespace dealii;
 
@@ -47,6 +43,8 @@ void CircleTestSolver::make_grid() {
     GridGenerator::hyper_cube(triangulation, -1.0, 1.0);
 
     triangulation.refine_global(refinements);
+
+    //GridGenerator::subdivided_hyper_cube(triangulation, std::pow(2, refinements) + 1, -1.0, 1.0);
 
     deallog << "Made grid. Number of active cells: " << triangulation.n_active_cells() << std::endl;
 }
@@ -81,31 +79,18 @@ public:
 int main() {
     deallog.depth_console(1);
 
-    // for(unsigned int refinement = TEST_MIN_REFINEMENT; 
-    //     refinement <= TEST_MAX_REFINEMENT;
-    //     refinement++) {
-    //     CircleTestSolver solver(TEST_OUTPUT_TIME, 
-    //         "circle-test/spatial-refinements-" + std::to_string(refinement) + ".vtk", 
-    //         refinement);
-    //     TestSolutionExact test_soln;
-    //     solver.initial_condition = &test_soln;
-    //     solver.boundary_function = &test_soln;
-    //     solver.time_step = TEST_SPATIAL_TIME_STEP;
-    //     solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
-    //     solver.run();
-    // }
-
-    for(unsigned int temporal_step = 0;
-        temporal_step <= TEST_TEMPORAL_STEPS;
-        temporal_step++) {
+    for(unsigned int refinement = TEST_MIN_STEP; 
+        refinement <= TEST_MAX_STEP;
+        refinement++) {
         CircleTestSolver solver(TEST_OUTPUT_TIME, 
-            "circle-test/temporal-refinements-" + std::to_string(temporal_step) + ".vtk", 
-            TEST_TEMPORAL_SPACE_REFINEMENTS);
+            "circle-test/refinements-" + std::to_string(refinement) + ".vtk", 
+            refinement);
         TestSolutionExact test_soln;
         solver.initial_condition = &test_soln;
         solver.boundary_function = &test_soln;
-        solver.time_step = TEST_START_TIME_STEP * std::pow(2.0, -(double)temporal_step);
+        solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
+        solver.use_scheduled_relaxation = true;
         solver.run();
     }
 }

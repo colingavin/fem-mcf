@@ -44,6 +44,7 @@ CSFSolver::CSFSolver() :
     max_relaxation_steps (DEFAULT_MAX_RELAX_STEPS),
     relaxation_residual_tolerance (DEFAULT_RESIDUAL_TOLERANCE),
     time_dep_boundary_conditions (true),
+    use_scheduled_relaxation (false),
     // Internal
     fe (1),
     dof_handler (triangulation),
@@ -83,7 +84,7 @@ void CSFSolver::assemble_relaxation_step() {
 
     // Apply boundary conditions
     if(time_dep_boundary_conditions || boundary_values.empty()) {
-        deallog << "Computing boundary conditions." << std::endl;
+        //deallog << "Computing boundary conditions." << std::endl;
         boundary_function->set_time(current_time);
         VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);    
     }
@@ -187,6 +188,8 @@ void CSFSolver::run() {
         Vector<double> residual_vector(dof_handler.n_dofs());
         double residual = 0.0;
         unsigned int relaxation_steps = 0;
+        double min_grad_epsilon = grad_epsilon;
+        if(use_scheduled_relaxation) grad_epsilon = 1.0;
         do {
             if(relaxation_steps >= max_relaxation_steps) {
                         DataOut<2> data_out;
@@ -210,7 +213,11 @@ void CSFSolver::run() {
             residual = residual_vector.l2_norm() / dof_handler.n_dofs();
 
             relaxation_steps++;
+
+            if(use_scheduled_relaxation) grad_epsilon = MAX(min_grad_epsilon, grad_epsilon * 0.5);
         } while(residual > relaxation_residual_tolerance);
+
+        //grad_epsilon = min_grad_epsilon;
 
         deallog << "Relaxation converged in " << relaxation_steps << " steps." << std::endl;
 
