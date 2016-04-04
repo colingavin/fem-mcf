@@ -10,6 +10,8 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
 PROJECT(RelaxationMCF)
 
+set(DEAL_II_CXX_FLAGS "${DEAL_II_CXX_FLAGS} -Wno-unused-local-typedefs -Wno-mismatched-tags")
+
 ADD_EXECUTABLE(CircleTestProblem src/CSFSolver.cpp test/CircleTestProblem.cpp)
 DEAL_II_SETUP_TARGET(CircleTestProblem)
 
