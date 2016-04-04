@@ -79,7 +79,7 @@ public:
 int main() {
     deallog.depth_console(1);
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MAX_STEP; 
         refinement <= TEST_MAX_STEP;
         refinement++) {
         CircleTestSolver solver(TEST_OUTPUT_TIME, 
@@ -90,7 +90,9 @@ int main() {
         solver.boundary_function = &test_soln;
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
-        solver.use_scheduled_relaxation = true;
+        solver.use_scheduled_relaxation = false;
+        solver.relaxation_residual_tolerance = 1e-5;
+        solver.max_relaxation_steps = 10;
         solver.run();
     }
 }

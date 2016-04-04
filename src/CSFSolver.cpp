@@ -191,18 +191,12 @@ void CSFSolver::run() {
         double min_grad_epsilon = grad_epsilon;
         if(use_scheduled_relaxation) grad_epsilon = 1.0;
         do {
-            if(relaxation_steps >= max_relaxation_steps) {
-                        DataOut<2> data_out;
-                data_out.attach_dof_handler(dof_handler);
-                data_out.add_data_vector(residual_vector, "resid");
-                data_out.build_patches();
-
-                std::ofstream out("paperclip-test/residual.vtk");
-                data_out.write_vtk(out);
-            }
-
             // Verify that we haven't exceeded max steps
-            AssertThrow(relaxation_steps < max_relaxation_steps, RelaxationConvergenceFailure(residual));
+            //AssertThrow(relaxation_steps < max_relaxation_steps, RelaxationConvergenceFailure(residual));
+            if(relaxation_steps > max_relaxation_steps) {
+                deallog << "Note relaxation_steps exceed max_relaxation_steps. Continuing to next time step." << std::endl;
+                break;
+            }
 
             solve_relaxation_step();
 
@@ -217,7 +211,7 @@ void CSFSolver::run() {
             if(use_scheduled_relaxation) grad_epsilon = MAX(min_grad_epsilon, grad_epsilon * 0.5);
         } while(residual > relaxation_residual_tolerance);
 
-        //grad_epsilon = min_grad_epsilon;
+        grad_epsilon = min_grad_epsilon;
 
         deallog << "Relaxation converged in " << relaxation_steps << " steps." << std::endl;
 
