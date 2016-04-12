@@ -10,6 +10,7 @@
 
 #include <deal.II/base/exceptions.h>
 #include <deal.II/base/function.h>
+#include <deal.II/base/point.h>
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/dofs/dof_handler.h>
@@ -54,9 +55,9 @@ public:
     // Extension points
     virtual void make_grid() = 0;
     virtual void write_output(const unsigned int timestep_number) = 0;
+    virtual double weight_function(const Point<2> &pt) const;
 
 private:
-    void setup_system();
     void assemble_relaxation_step();
     // Computes the matices \int phi_i phi_j / (|grad u_l^{n + 1}| + |grad u^n|)
     // and \int grad phi_i . grad phi_j / (|grad u_l^{n + 1}| + |grad u^n|
@@ -66,11 +67,12 @@ private:
                                  SparseMatrix<double> &stiffness_output);
     void solve_relaxation_step();
 
+    bool setup_done;
+
     // Grid / FEM Components
     FE_Q<2>             fe;
 
     // Discrete solution components
-    SparsityPattern         sparsity_pattern;
     SparseMatrix<double>    relax_system_matrix;
     Vector<double>          relax_rhs;
     Vector<double>          last_relax_rhs; // Keep this for residual computation
@@ -79,7 +81,10 @@ private:
     std::map<dealii::types::global_dof_index, double> boundary_values;
 
 protected:
+    void setup_system();
+
     // Grid / FEM Components
+    SparsityPattern  sparsity_pattern;
     Triangulation<2> triangulation;
     DoFHandler<2>    dof_handler;
 

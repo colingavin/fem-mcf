@@ -46,11 +46,14 @@ CSFSolver::CSFSolver() :
     time_dep_boundary_conditions (true),
     use_scheduled_relaxation (false),
     // Internal
+    setup_done (false),
     fe (1),
     dof_handler (triangulation),
     current_time (0.0) {}
 
 void CSFSolver::setup_system() {
+    make_grid();
+    
     dof_handler.distribute_dofs(fe);
 
     const unsigned int n_dofs = dof_handler.n_dofs();
@@ -67,6 +70,8 @@ void CSFSolver::setup_system() {
     last_relax_rhs.reinit(n_dofs);
     current_solution.reinit(n_dofs);
     last_solution.reinit(n_dofs);
+
+    setup_done = true;
 }
 
 void CSFSolver::assemble_relaxation_step() {
@@ -86,9 +91,13 @@ void CSFSolver::assemble_relaxation_step() {
     if(time_dep_boundary_conditions || boundary_values.empty()) {
         //deallog << "Computing boundary conditions." << std::endl;
         boundary_function->set_time(current_time);
-        VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);    
+        VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);
     }
     MatrixTools::apply_boundary_values(boundary_values, relax_system_matrix, current_solution, relax_rhs);
+}
+
+double CSFSolver::weight_function(const Point<2> &pt) const {
+    return 1.0;
 }
 
 void CSFSolver::compute_system_matrices(const Vector<double> &last_relax_step,
@@ -123,10 +132,12 @@ void CSFSolver::compute_system_matrices(const Vector<double> &last_relax_step,
                     // Compute the shared denominator - normalizing to avoid infinities
                     double grad_sum = last_relax_grads[q_pt_idx].norm() + previous_step_grads[q_pt_idx].norm();
                     double grad_sum_inv = 1.0 / MAX(grad_sum, grad_epsilon);
+                    // If there is a weight function, compute its value at the quad point
+                    double weight_fn_value = weight_function(fe_values.quadrature_point(q_pt_idx));
                     // Compute the mass component
-                    local_mass_matrix(i, j) += (fe_values.shape_value(i, q_pt_idx) * fe_values.shape_value(j, q_pt_idx)  * grad_sum_inv * fe_values.JxW(q_pt_idx));
+                    local_mass_matrix(i, j) += (fe_values.shape_value(i, q_pt_idx) * fe_values.shape_value(j, q_pt_idx) * weight_fn_value * grad_sum_inv * fe_values.JxW(q_pt_idx));
                     // Compute the stiffness component
-                    local_stiffness_matrix(i, j) += (fe_values.shape_grad(i, q_pt_idx) * fe_values.shape_grad(j, q_pt_idx) * grad_sum_inv * fe_values.JxW(q_pt_idx));
+                    local_stiffness_matrix(i, j) += (fe_values.shape_grad(i, q_pt_idx) * fe_values.shape_grad(j, q_pt_idx) * weight_fn_value * grad_sum_inv * fe_values.JxW(q_pt_idx));
                 }
             }
         }
@@ -156,8 +167,9 @@ void CSFSolver::run() {
     Assert(initial_condition != NULL, ExcInternalError());
 
     // Setup
-    make_grid();
-    setup_system();
+    if(!setup_done) {
+        setup_system();
+    }
 
     // Initial condition
     ConstraintMatrix constraints;
@@ -178,9 +190,13 @@ void CSFSolver::run() {
     write_output(0);
 
     // Begin time-stepping
+    deallog.push("CSF Time Stepping");
     unsigned int total_steps = ceil(final_time / time_step);
-    for(unsigned int step_idx = 1; step_idx <= total_steps; step_idx++) {
+    unsigned int step_idx = 1;
+    while(current_time < final_time) {
         current_time += time_step;
+        step_idx++;
+
         deallog << "=== (" << step_idx << ") Advancing time to " << current_time << " ===" << std::endl;
 
         assemble_relaxation_step();
@@ -219,6 +235,7 @@ void CSFSolver::run() {
 
         write_output(step_idx);
     }
+    deallog.pop();
 }
 
 // An exact radial solution to the level set equation

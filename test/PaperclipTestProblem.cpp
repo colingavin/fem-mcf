@@ -1,4 +1,4 @@
-#include "../src/CSFSolver.hpp"
+#include "SolverDiagnostics.hpp"
 
 #include <deal.II/base/logstream.h>
 
@@ -11,6 +11,10 @@
 #include <fstream>
 
 #include <nlopt.hpp>
+
+#define TEST_MIN_STEP 1
+#define TEST_MAX_STEP 5
+#define TEST_OUTPUT_TIME 0.5
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
@@ -72,59 +76,54 @@ public:
     }
 };
 
-class PaperclipTestSolver : public CSFSolver {
+class PaperclipTestSolver : public SolverDiagnosticsDifferencing {
 public:
-    PaperclipTestSolver(const double _output_time, 
-                     const std::string _output_file_path,
-                     const unsigned int _refinements) : CSFSolver() {
-        output_time = _output_time;
-        output_file_path = _output_file_path;
-        refinements = _refinements;
+    PaperclipTestSolver() : SolverDiagnosticsDifferencing() {}
+
+    virtual void make_grid() {
+        GridGenerator::hyper_cube(triangulation, -2.0, 2.0);
+
+        triangulation.refine_global(refinements);
+
+        deallog << "Made grid. Number of active cells: " << triangulation.n_active_cells() << std::endl;
     }
-
-    virtual void make_grid();
-    virtual void write_output(const unsigned int timestep_number);
-
-    // Time at which to output results
-    double output_time;
-    // Path to output
-    std::string output_file_path;
-    // Number of refinements of the grid
-    unsigned int refinements;
 };
-
-void PaperclipTestSolver::make_grid() {
-    GridGenerator::hyper_cube(triangulation, -2.0, 2.0);
-
-    triangulation.refine_global(refinements);
-
-    deallog << "Made grid. Number of active cells: " << triangulation.n_active_cells() << std::endl;
-}
-
-void PaperclipTestSolver::write_output(const unsigned int timestep_number) {
-    if(std::abs(output_time - current_time) < 1e-6) {
-        deallog <<  "Time = " << current_time 
-                << ". Writing solution to: " << output_file_path << std::endl;
-
-        DataOut<2> data_out;
-        data_out.attach_dof_handler(dof_handler);
-        data_out.add_data_vector(current_solution, "u");
-        data_out.build_patches();
-
-        std::ofstream out(output_file_path);
-        data_out.write_vtk(out);
-    }
-}
 
 int main() {
     deallog.depth_console(1);
 
-    PaperclipTestSolver solver(0.5, "paperclip-test/test.vtk", 6);
-    solver.time_step = 0.5 / 30.0;
-    solver.final_time = 0.5 + 1e-6;
-    solver.time_dep_boundary_conditions = false;
-    PaperclipSignedDistanceFn paperclip_fn;
-    solver.boundary_function = &paperclip_fn;
-    solver.initial_condition = &paperclip_fn;
-    solver.run();
+    PaperclipTestSolver *previous_solver = NULL;
+    PaperclipTestSolver *solver = NULL;
+
+    for(unsigned int refinement = TEST_MIN_STEP; 
+        refinement <= TEST_MAX_STEP;
+        refinement++) {
+        deallog << "Beginning test for refinement = " << refinement << std::endl;
+
+        solver = new PaperclipTestSolver();
+        solver->output_time = TEST_OUTPUT_TIME;
+        solver->output_file_path = "paperclip-test/refinements-" + std::to_string(refinement) + ".vtk";
+        solver->refinements = refinement;
+        
+        PaperclipSignedDistanceFn test_soln;
+        solver->initial_condition = &test_soln;
+        solver->boundary_function = &test_soln;
+        solver->time_dep_boundary_conditions = false;
+        solver->time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
+        solver->final_time = TEST_OUTPUT_TIME;
+        solver->use_scheduled_relaxation = false;
+        solver->relaxation_residual_tolerance = 1e-7;
+        solver->max_relaxation_steps = 20;
+
+        solver->setup_and_interpolate(previous_solver);
+
+        solver->run();
+
+        deallog << "L2 Error = " << solver->output_l2_error << std::endl
+                << "H1 Error = " << solver->output_h1_error << std::endl;
+
+        //if(previous_solver != NULL) delete previous_solver;
+        
+        previous_solver = solver;
+    }
 }

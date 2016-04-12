@@ -1,4 +1,4 @@
-//#include "../src/CSFSolver.hpp"
+#include "../src/AxialMCFSolver.hpp"
 #include "SolverDiagnostics.hpp"
 
 #include <deal.II/base/logstream.h>
@@ -7,29 +7,28 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/manifold_lib.h>
 
-#include <deal.II/numerics/data_out.h>
-#include <deal.II/numerics/vector_tools.h>
-
 #include <fstream>
-
-#define OUTPUT_TIME_EPSILON 1e-10
 
 #define TEST_MIN_STEP 1
 #define TEST_MAX_STEP 5
-#define TEST_OUTPUT_TIME 0.125
+#define TEST_OUTPUT_TIME 1.0
 
 using namespace dealii;
 
-class CircleTestSolver : public SolverDiagnosticsExact {
+class SphereTestSolver : public SolverDiagnosticsExact, public AxialMCFSolver {
 public:
-    CircleTestSolver() : SolverDiagnosticsExact() {}
+    SphereTestSolver() : SolverDiagnosticsExact(), AxialMCFSolver() {}
+
     virtual void make_grid() {
-        GridGenerator::hyper_cube(triangulation, -1.0, 1.0);
+        Point<2> lower_left(0.0, -1.0);
+        Point<2> upper_right(1.0, 1.0);
+        GridGenerator::hyper_rectangle(triangulation, lower_left, upper_right);
+
+        setup_boundary_conditions();
 
         triangulation.refine_global(refinements);
 
-        deallog << "Made grid. Number of active cells: " 
-                << triangulation.n_active_cells() << std::endl;
+        deallog << "Made grid. Number of active cells: " << triangulation.n_active_cells() << std::endl;
     }
 };
 
@@ -41,7 +40,7 @@ public:
         const double y = pt(1);
         const double t = get_time();
         const double r2 = std::pow(x, 2.0) + std::pow(y, 2.0);
-        return std::exp(-t-r2/2.0) - std::exp(-0.5);
+        return std::exp(-2.0*t-r2/2.0) - std::exp(-0.5);
     }
 
     virtual Tensor<1, 2, double> gradient(const Point<2> &pt, const unsigned int component = 0) const {
@@ -52,7 +51,7 @@ public:
         Tensor<1, 2, double> result;
         result[0] = x;
         result[1] = y;
-        result *= -std::exp(-t-r2/2.0);
+        result *= -std::exp(-2.0*t-r2/2.0);
         return result;
     }
 };
@@ -66,29 +65,28 @@ int main() {
     for(unsigned int refinement = TEST_MIN_STEP; 
         refinement <= TEST_MAX_STEP;
         refinement++) {
-        deallog << "Beginning test for refinement = " << refinement << std::endl;
-
-        CircleTestSolver solver;
-        solver.output_time = TEST_OUTPUT_TIME;
-        solver.output_file_path = "circle-test/refinements-" + std::to_string(refinement) + ".vtk";
-        solver.refinements = refinement;
         
+        SphereTestSolver solver;
+        solver.output_time = TEST_OUTPUT_TIME;
+        solver.output_file_path = "sphere-test/refinements-" + std::to_string(refinement) + ".vtk";
+        solver.refinements = refinement;
+
         TestSolutionExact test_soln;
         solver.initial_condition = &test_soln;
         solver.boundary_function = &test_soln;
         solver.exact_soln = &test_soln;
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
-        solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
+        solver.final_time = TEST_OUTPUT_TIME;
         solver.use_scheduled_relaxation = false;
-        solver.relaxation_residual_tolerance = 1e-7;
-        solver.max_relaxation_steps = 20;
+        solver.relaxation_residual_tolerance = 1e-5;
+        solver.max_relaxation_steps = 10;
         solver.run();
 
         deallog << "L2 Error = " << solver.output_l2_error << std::endl
                 << "H1 Error = " << solver.output_h1_error << std::endl;
 
         error_norms_out << refinement << ", "
-                << solver.output_l2_error << ", "
-                << solver.output_h1_error << std::endl;
+                        << solver.output_l2_error << ", "
+                        << solver.output_h1_error << std::endl;
     }
 }
