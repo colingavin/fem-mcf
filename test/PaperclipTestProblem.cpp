@@ -95,16 +95,16 @@ int main() {
     PaperclipTestSolver *previous_solver = NULL;
     PaperclipTestSolver *solver = NULL;
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MIN_STEP;
         refinement <= TEST_MAX_STEP;
         refinement++) {
         deallog << "Beginning test for refinement = " << refinement << std::endl;
 
         solver = new PaperclipTestSolver();
         solver->output_time = TEST_OUTPUT_TIME;
-        solver->output_file_path = "paperclip-test/refinements-" + std::to_string(refinement) + ".vtk";
+        solver->output_file_path = "paperclip-test/refinements-2-" + std::to_string(refinement) + ".vtk";
         solver->refinements = refinement;
-        
+
         PaperclipSignedDistanceFn test_soln;
         solver->initial_condition = &test_soln;
         solver->boundary_function = &test_soln;
@@ -114,6 +114,7 @@ int main() {
         solver->use_scheduled_relaxation = false;
         solver->relaxation_residual_tolerance = 1e-7;
         solver->max_relaxation_steps = 20;
+        solver->grad_epsilon = 1e-6;
 
         solver->setup_and_interpolate(previous_solver);
 
@@ -122,8 +123,6 @@ int main() {
         deallog << "L2 Error = " << solver->output_l2_error << std::endl
                 << "H1 Error = " << solver->output_h1_error << std::endl;
 
-        //if(previous_solver != NULL) delete previous_solver;
-        
         previous_solver = solver;
     }
 }

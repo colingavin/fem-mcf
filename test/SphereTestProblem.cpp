@@ -62,10 +62,10 @@ int main() {
     std::ofstream error_norms_out("sphere-test/error_norms.csv");
     error_norms_out << "n, l2, h1" << std::endl;
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MIN_STEP;
         refinement <= TEST_MAX_STEP;
         refinement++) {
-        
+
         SphereTestSolver solver;
         solver.output_time = TEST_OUTPUT_TIME;
         solver.output_file_path = "sphere-test/refinements-" + std::to_string(refinement) + ".vtk";
@@ -78,8 +78,9 @@ int main() {
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver.final_time = TEST_OUTPUT_TIME;
         solver.use_scheduled_relaxation = false;
-        solver.relaxation_residual_tolerance = 1e-5;
-        solver.max_relaxation_steps = 10;
+        solver.grad_epsilon = 1e-6;
+        solver.relaxation_residual_tolerance = 1e-7;
+        solver.max_relaxation_steps = 20;
         solver.run();
 
         deallog << "L2 Error = " << solver.output_l2_error << std::endl

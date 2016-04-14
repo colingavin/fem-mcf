@@ -14,7 +14,7 @@ SolverDiagnostics::SolverDiagnostics() : CSFSolver() {}
 void SolverDiagnostics::write_output(const unsigned int timestep_number) {
     if(std::abs(output_time - current_time) < OUTPUT_TIME_EPSILON) {
         // Write current solution
-        deallog <<  "Time = " << current_time 
+        deallog <<  "Time = " << current_time
                 << ". Writing solution to: " << output_file_path << std::endl;
 
         DataOut<2> data_out;
@@ -24,7 +24,7 @@ void SolverDiagnostics::write_output(const unsigned int timestep_number) {
 
         std::ofstream out(output_file_path);
         data_out.write_vtk(out);
-        
+
         // Compute errors
         output_l2_error = current_l2_error();
         output_h1_error = current_h1_error();
@@ -39,7 +39,7 @@ double SolverDiagnosticsExact::current_l2_error() {
     exact_soln->set_time(current_time);
     Vector<double> l2_per_cell(triangulation.n_active_cells());
     VectorTools::integrate_difference(
-        dof_handler, 
+        dof_handler,
         current_solution,
         *exact_soln,
         l2_per_cell,
@@ -52,7 +52,7 @@ double SolverDiagnosticsExact::current_h1_error() {
     exact_soln->set_time(current_time);
     Vector<double> h1_per_cell(triangulation.n_active_cells());
     VectorTools::integrate_difference(
-        dof_handler, 
+        dof_handler,
         current_solution,
         *exact_soln,
         h1_per_cell,
@@ -68,7 +68,7 @@ SolverDiagnosticsDifferencing::SolverDiagnosticsDifferencing() : SolverDiagnosti
 
 void SolverDiagnosticsDifferencing::setup_and_interpolate(SolverDiagnosticsDifferencing *previous_solver) {
     setup_system();
-    
+
     coarse_solution_interpolated.reinit(dof_handler.n_dofs());
 
     if(previous_solver != NULL) {
@@ -103,5 +103,3 @@ double SolverDiagnosticsDifferencing::current_h1_error() {
 
     return stiffness_matrix.matrix_norm_square(difference);
 }
-
-

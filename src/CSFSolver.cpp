@@ -53,7 +53,7 @@ CSFSolver::CSFSolver() :
 
 void CSFSolver::setup_system() {
     make_grid();
-    
+
     dof_handler.distribute_dofs(fe);
 
     const unsigned int n_dofs = dof_handler.n_dofs();
@@ -76,7 +76,7 @@ void CSFSolver::setup_system() {
 
 void CSFSolver::assemble_relaxation_step() {
     SparseMatrix<double> mass_matrix(sparsity_pattern);
-    compute_system_matrices(current_solution, last_solution, 
+    compute_system_matrices(current_solution, last_solution,
                             mass_matrix, relax_system_matrix);
 
     // The system matrix is 1/k M + K
@@ -182,7 +182,7 @@ void CSFSolver::run() {
     // Prime the right hand side for residual computation
     SparseMatrix<double> mass_matrix(sparsity_pattern);
     SparseMatrix<double> stiffness_matrix(sparsity_pattern); // Unused, but need to pass in something
-    compute_system_matrices(current_solution, last_solution, 
+    compute_system_matrices(current_solution, last_solution,
                             mass_matrix, stiffness_matrix);
     mass_matrix.vmult(relax_rhs, last_solution);
     relax_rhs *= 1.0/time_step;
@@ -218,8 +218,12 @@ void CSFSolver::run() {
 
             assemble_relaxation_step();
 
-            residual_vector = last_relax_rhs;
+            //residual_vector = last_relax_rhs;
+            //residual_vector -= relax_rhs;
+
+            relax_system_matrix.vmult(residual_vector, current_solution);
             residual_vector -= relax_rhs;
+
             residual = residual_vector.l2_norm() / dof_handler.n_dofs();
 
             relaxation_steps++;

@@ -12,11 +12,9 @@
 
 #include <fstream>
 
-#define OUTPUT_TIME_EPSILON 1e-10
-
 #define TEST_MIN_STEP 1
 #define TEST_MAX_STEP 5
-#define TEST_OUTPUT_TIME 0.125
+#define TEST_OUTPUT_TIME 0.1
 
 using namespace dealii;
 
@@ -28,7 +26,7 @@ public:
 
         triangulation.refine_global(refinements);
 
-        deallog << "Made grid. Number of active cells: " 
+        deallog << "Made grid. Number of active cells: "
                 << triangulation.n_active_cells() << std::endl;
     }
 };
@@ -60,10 +58,10 @@ public:
 int main() {
     deallog.depth_console(1);
 
-    std::ofstream error_norms_out("sphere-test/error_norms.csv");
+    std::ofstream error_norms_out("circle-test/error_norms.csv");
     error_norms_out << "n, l2, h1" << std::endl;
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MIN_STEP;
         refinement <= TEST_MAX_STEP;
         refinement++) {
         deallog << "Beginning test for refinement = " << refinement << std::endl;
@@ -72,16 +70,17 @@ int main() {
         solver.output_time = TEST_OUTPUT_TIME;
         solver.output_file_path = "circle-test/refinements-" + std::to_string(refinement) + ".vtk";
         solver.refinements = refinement;
-        
+
         TestSolutionExact test_soln;
         solver.initial_condition = &test_soln;
         solver.boundary_function = &test_soln;
         solver.exact_soln = &test_soln;
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
-        solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
+        solver.final_time = TEST_OUTPUT_TIME;
         solver.use_scheduled_relaxation = false;
         solver.relaxation_residual_tolerance = 1e-7;
         solver.max_relaxation_steps = 20;
+        solver.grad_epsilon = 1e-6;
         solver.run();
 
         deallog << "L2 Error = " << solver.output_l2_error << std::endl
