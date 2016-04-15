@@ -41,10 +41,9 @@ CSFSolver::CSFSolver() :
     time_step (DEFAULT_TIME_STEP),
     final_time (DEFAULT_FINAL_TIME),
     grad_epsilon (DEFAULT_GRAD_EPSILON),
-    max_relaxation_steps (DEFAULT_MAX_RELAX_STEPS),
     relaxation_residual_tolerance (DEFAULT_RESIDUAL_TOLERANCE),
+    max_relaxation_steps (DEFAULT_MAX_RELAX_STEPS),
     time_dep_boundary_conditions (true),
-    use_scheduled_relaxation (false),
     // Internal
     setup_done (false),
     fe (1),
@@ -67,7 +66,6 @@ void CSFSolver::setup_system() {
     relax_system_matrix.reinit(sparsity_pattern);
 
     relax_rhs.reinit(n_dofs);
-    last_relax_rhs.reinit(n_dofs);
     current_solution.reinit(n_dofs);
     last_solution.reinit(n_dofs);
 
@@ -83,13 +81,11 @@ void CSFSolver::assemble_relaxation_step() {
     relax_system_matrix.add(1.0/time_step, mass_matrix);
 
     // The right hand side is 1/k M u_n
-    last_relax_rhs = relax_rhs; // Save the old rhs for residual computation
     mass_matrix.vmult(relax_rhs, last_solution);
     relax_rhs *= 1.0/time_step;
 
     // Apply boundary conditions
     if(time_dep_boundary_conditions || boundary_values.empty()) {
-        //deallog << "Computing boundary conditions." << std::endl;
         boundary_function->set_time(current_time);
         VectorTools::interpolate_boundary_values(dof_handler, 0, *boundary_function, boundary_values);
     }
@@ -204,11 +200,8 @@ void CSFSolver::run() {
         Vector<double> residual_vector(dof_handler.n_dofs());
         double residual = 0.0;
         unsigned int relaxation_steps = 0;
-        double min_grad_epsilon = grad_epsilon;
-        if(use_scheduled_relaxation) grad_epsilon = 1.0;
         do {
             // Verify that we haven't exceeded max steps
-            //AssertThrow(relaxation_steps < max_relaxation_steps, RelaxationConvergenceFailure(residual));
             if(relaxation_steps > max_relaxation_steps) {
                 deallog << "Note relaxation_steps exceed max_relaxation_steps. Continuing to next time step." << std::endl;
                 break;
@@ -218,9 +211,6 @@ void CSFSolver::run() {
 
             assemble_relaxation_step();
 
-            //residual_vector = last_relax_rhs;
-            //residual_vector -= relax_rhs;
-
             relax_system_matrix.vmult(residual_vector, current_solution);
             residual_vector -= relax_rhs;
 
@@ -228,10 +218,7 @@ void CSFSolver::run() {
 
             relaxation_steps++;
 
-            if(use_scheduled_relaxation) grad_epsilon = MAX(min_grad_epsilon, grad_epsilon * 0.5);
         } while(residual > relaxation_residual_tolerance);
-
-        grad_epsilon = min_grad_epsilon;
 
         deallog << "Relaxation converged in " << relaxation_steps << " steps." << std::endl;
 
@@ -241,16 +228,3 @@ void CSFSolver::run() {
     }
     deallog.pop();
 }
-
-// An exact radial solution to the level set equation
-class TestSolutionExact : public Function<2> {
-public:
-    TestSolutionExact() : Function<2, double>() {}
-    virtual double value(const Point<2> &pt, const unsigned int component = 0) const {
-        const double x = pt(0);
-        const double y = pt(1);
-        const double t = get_time();
-        const double r2 = std::pow(x, 2.0) + std::pow(y, 2.0);
-        return std::exp(-t-r2/2.0) - std::exp(-0.5);
-    }
-};

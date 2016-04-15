@@ -45,14 +45,14 @@ int main() {
     DirichletTestSolver *previous_solver = NULL;
     DirichletTestSolver *solver = NULL;
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MIN_STEP;
         refinement <= TEST_MAX_STEP;
         refinement++) {
         deallog << "Beginning test for refinement = " << refinement << std::endl;
-        
+
         solver = new DirichletTestSolver();
         solver->output_time = TEST_OUTPUT_TIME;
-        solver->output_file_path = "dirbc-test/refinements-" + std::to_string(refinement) + ".vtk";
+        solver->output_file_path = "output/dirbc-test/refinements-" + std::to_string(refinement) + ".vtk";
         solver->refinements = refinement;
 
         TestInitialCond initial_condition;
@@ -60,10 +60,9 @@ int main() {
         solver->boundary_function = &initial_condition;
         solver->time_step = TEST_OUTPUT_TIME * 0.02;
         solver->final_time = TEST_OUTPUT_TIME;
-        solver->use_scheduled_relaxation = false;
         solver->relaxation_residual_tolerance = 1e-8;
         solver->max_relaxation_steps = 20;
-        
+
         solver->setup_and_interpolate(previous_solver);
         solver->run();
 

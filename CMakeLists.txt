@@ -11,6 +11,7 @@ DEAL_II_INITIALIZE_CACHED_VARIABLES()
 PROJECT(RelaxationMCF)
 
 set(DEAL_II_CXX_FLAGS "${DEAL_II_CXX_FLAGS} -Wno-unused-local-typedefs -Wno-mismatched-tags")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ADD_EXECUTABLE(CircleTestProblem
   src/CSFSolver.cpp test/SolverDiagnostics.cpp test/CircleTestProblem.cpp)

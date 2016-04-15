@@ -48,7 +48,6 @@ public:
     double relaxation_residual_tolerance;
     unsigned int max_relaxation_steps;
     bool time_dep_boundary_conditions;
-    bool use_scheduled_relaxation;
     Function<2> *initial_condition;
     Function<2> *boundary_function;
 

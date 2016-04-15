@@ -22,9 +22,7 @@ template <typename T> int sgn(T val) {
 
 double paperclip_distance(const std::vector<double> &x, std::vector<double> &grad, void* data) {
     Point<2> pt = *(Point<2>*)(data);
-    //std::cout << "Eval distance from x = " << x[0] << ", " << x[1] << " to = " << pt << std::endl;
     if(!grad.empty()) {
-        //std::cout << "dist + grad" << std::endl;
         grad[0] = 2.0 * (x[0] - pt[0]);
         grad[1] = 2.0 * (x[1] - pt[1]);
     }
@@ -33,9 +31,7 @@ double paperclip_distance(const std::vector<double> &x, std::vector<double> &gra
 
 double paperclip_constraint(const std::vector<double> &x, std::vector<double> &grad, void* data) {
     double t = *((double*)data);
-    //std::cout << "Eval constraint t = " << t << "at x = " << x[0] << ", " << x[1] << std::endl;
     if(!grad.empty()) {
-        //std::cout << "constraint + grad" << std::endl;
         grad[0] = std::exp(1 - t) * std::sin(x[0]);
         grad[1] = std::sinh(x[1]);
     }
@@ -102,7 +98,7 @@ int main() {
 
         solver = new PaperclipTestSolver();
         solver->output_time = TEST_OUTPUT_TIME;
-        solver->output_file_path = "paperclip-test/refinements-2-" + std::to_string(refinement) + ".vtk";
+        solver->output_file_path = "output/paperclip-test/refinements-2-" + std::to_string(refinement) + ".vtk";
         solver->refinements = refinement;
 
         PaperclipSignedDistanceFn test_soln;
@@ -111,7 +107,6 @@ int main() {
         solver->time_dep_boundary_conditions = false;
         solver->time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver->final_time = TEST_OUTPUT_TIME;
-        solver->use_scheduled_relaxation = false;
         solver->relaxation_residual_tolerance = 1e-7;
         solver->max_relaxation_steps = 20;
         solver->grad_epsilon = 1e-6;

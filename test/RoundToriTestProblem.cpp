@@ -20,7 +20,7 @@ using namespace dealii;
 
 class ToriTestSolver : public AxialMCFSolver {
 public:
-    ToriTestSolver(const double _output_time, 
+    ToriTestSolver(const double _output_time,
                      const std::string _output_file_path,
                      const unsigned int _refinements) : AxialMCFSolver() {
         output_time = _output_time;
@@ -53,7 +53,7 @@ void ToriTestSolver::make_grid() {
 
 void ToriTestSolver::write_output(const unsigned int timestep_number) {
     if(timestep_number % 5 == 0) {
-        deallog <<  "Time = " << current_time 
+        deallog <<  "Time = " << current_time
                 << ". Writing solution to: " << output_file_path << std::endl;
 
         DataOut<2> data_out;
@@ -80,18 +80,17 @@ public:
 int main() {
     deallog.depth_console(1);
 
-    for(unsigned int refinement = TEST_MIN_STEP; 
+    for(unsigned int refinement = TEST_MIN_STEP;
         refinement <= TEST_MAX_STEP;
         refinement++) {
-        ToriTestSolver solver(TEST_OUTPUT_TIME, 
-            "tori-test/refinements-" + std::to_string(refinement), 
+        ToriTestSolver solver(TEST_OUTPUT_TIME,
+            "output/tori-test/refinements-" + std::to_string(refinement),
             refinement);
         ToriInitialCondition ibc;
         solver.initial_condition = &ibc;
         solver.boundary_function = &ibc;
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver.final_time = TEST_OUTPUT_TIME + OUTPUT_TIME_EPSILON;
-        solver.use_scheduled_relaxation = false;
         solver.relaxation_residual_tolerance = 1e-5;
         solver.max_relaxation_steps = 10;
         solver.time_dep_boundary_conditions = false;

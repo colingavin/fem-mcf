@@ -68,7 +68,7 @@ int main() {
 
         CircleTestSolver solver;
         solver.output_time = TEST_OUTPUT_TIME;
-        solver.output_file_path = "circle-test/refinements-" + std::to_string(refinement) + ".vtk";
+        solver.output_file_path = "output/circle-test/refinements-" + std::to_string(refinement) + ".vtk";
         solver.refinements = refinement;
 
         TestSolutionExact test_soln;
@@ -77,7 +77,6 @@ int main() {
         solver.exact_soln = &test_soln;
         solver.time_step = TEST_OUTPUT_TIME * std::pow(2.0, -2.0*refinement);
         solver.final_time = TEST_OUTPUT_TIME;
-        solver.use_scheduled_relaxation = false;
         solver.relaxation_residual_tolerance = 1e-7;
         solver.max_relaxation_steps = 20;
         solver.grad_epsilon = 1e-6;
